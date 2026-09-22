@@ -14,12 +14,26 @@ export(float) var mouse_sensitivity = 0.0025
 export(float) var look_up_limit = 75.0
 export(float) var look_down_limit = 60.0
 
+# Lightweight first-person camera movement.
+export(float) var camera_bob_amount = 0.035
+export(float) var camera_bob_speed = 9.0
+export(float) var camera_sway_amount = 0.012
+export(float) var camera_sway_speed = 6.0
+export(float) var camera_shake_amount = 0.015
+
 var velocity = Vector3()
 var look_angle = 0.0
 var head = null
+var camera = null
+var head_base_position = Vector3()
+var camera_bob_time = 0.0
+var camera_shake_time = 0.0
 
 func _ready():
     head = get_node_or_null("Head")
+    if head != null:
+        head_base_position = head.translation
+        camera = head.get_node_or_null("Camera")
 
     if head != null:
         Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -70,3 +84,33 @@ func _physics_process(delta):
     velocity.z = move_toward(velocity.z, target_velocity.z, acceleration_rate * delta)
 
     velocity = move_and_slide(velocity, Vector3.UP)
+    update_camera_motion(delta, input_vector)
+
+func update_camera_motion(delta, input_vector):
+    if head == null:
+        return
+
+    var horizontal_speed = Vector2(velocity.x, velocity.z).length()
+    var moving = is_on_floor() and horizontal_speed > 0.15
+
+    if moving:
+        var sprinting = Input.is_action_pressed("sprint")
+        var speed_scale = 1.35 if sprinting else 1.0
+        camera_bob_time += delta * camera_bob_speed * speed_scale
+
+        var bob_x = cos(camera_bob_time * 0.5) * camera_sway_amount
+        var bob_y = abs(sin(camera_bob_time)) * camera_bob_amount
+        head.translation = head_base_position + Vector3(bob_x, bob_y, 0.0)
+    else:
+        camera_bob_time = lerp(camera_bob_time, 0.0, min(delta * 7.0, 1.0))
+        head.translation = head.translation.linear_interpolate(
+            head_base_position,
+            min(delta * 8.0, 1.0)
+        )
+
+    # Very subtle rotational camera shake while moving.
+    # This is intentionally small so the player does not lose visual control.
+    var shake = camera_shake_amount if moving else 0.0
+    var sway = sin(camera_bob_time * camera_sway_speed) * shake
+    if camera != null:
+        camera.rotation.z = lerp(camera.rotation.z, sway, min(delta * 8.0, 1.0))
