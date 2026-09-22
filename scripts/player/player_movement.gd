@@ -20,7 +20,7 @@ export(float) var camera_bob_speed = 9.0
 export(float) var camera_sway_amount = 0.012
 export(float) var camera_sway_speed = 6.0
 export(float) var camera_shake_amount = 0.015
-export(float) var camera_lean_angle = 8.0
+export(float) var camera_lean_angle = 5.0
 export(float) var camera_lean_speed = 10.0
 
 var velocity = Vector3()
@@ -122,6 +122,8 @@ func update_camera_motion(delta, input_vector):
     if Input.is_key_pressed(KEY_E):
         lean_direction += 1.0
 
+    # Lean the whole view from the neck, keeping the body in place.
+    # This lets the player peek around a wall without moving forward.
     var target_lean = deg2rad(camera_lean_angle) * lean_direction
     var target_rotation = target_lean + sway
 
