@@ -6,11 +6,11 @@ extends Spatial
 
 export(float) var cell_size = 3.5
 export(float) var wall_height = 4.6
-export(float) var ceiling_height = 5.2
+export(float) var ceiling_height = 4.8
 
-export(Color) var wall_color = Color(0.55, 0.58, 0.62)
-export(Color) var floor_color = Color(0.16, 0.18, 0.20)
-export(Color) var ceiling_color = Color(0.08, 0.09, 0.11)
+export(Color) var wall_color = Color(0.20, 0.22, 0.24)
+export(Color) var floor_color = Color(0.07, 0.08, 0.09)
+export(Color) var ceiling_color = Color(0.025, 0.03, 0.035)
 export(Color) var light_color = Color(1.0, 0.92, 0.72)
 
 export(int) var maze_width = 41
@@ -22,8 +22,8 @@ export(bool) var randomize_maze = false
 export(int) var maze_seed = 20260922
 
 # Player spawn room: medium-sized room with exactly one exit into the maze.
-export(Vector2) var spawn_room_size = Vector2(9, 7)
-export(Vector2) var spawn_room_origin = Vector2(16, 15)
+export(Vector2) var spawn_room_size = Vector2(7, 5)
+export(Vector2) var spawn_room_origin = Vector2(17, 16)
 
 # 0 = wall, 1 = corridor.
 var layout = []
