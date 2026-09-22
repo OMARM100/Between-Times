@@ -1,0 +1,4 @@
+# Local Godot project files — keep local, never track on GitHub
+project.godot
+default_env.tres
+scenes/
