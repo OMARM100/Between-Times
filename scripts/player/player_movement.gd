@@ -11,7 +11,8 @@ export(float) var jump_force = 5.5
 export(float) var gravity = 18.0
 
 export(float) var mouse_sensitivity = 0.0025
-export(float) var max_look_angle = 89.0
+export(float) var look_up_limit = 75.0
+export(float) var look_down_limit = 60.0
 
 var velocity = Vector3()
 var look_angle = 0.0
@@ -30,11 +31,11 @@ func _input(event):
     if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
         rotate_y(-event.relative.x * mouse_sensitivity)
 
-        look_angle -= event.relative.y * mouse_sensitivity
+        look_angle += event.relative.y * mouse_sensitivity
         look_angle = clamp(
             look_angle,
-            deg2rad(-max_look_angle),
-            deg2rad(max_look_angle)
+            deg2rad(-look_up_limit),
+            deg2rad(look_down_limit)
         )
 
         head.rotation.x = look_angle
