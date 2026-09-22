@@ -2,15 +2,10 @@ extends Spatial
 class_name StaticMaze
 
 # Fixed prototype maze for Godot 3.5.
-# The layout does not change between runs.
-#
-# # = wall
-# . = path
-# S = start
-# E = exit
+# The layout is predefined and does not change between runs.
 
-const CELL_SIZE = 4.0
-const WALL_HEIGHT = 3.0
+export(float) var cell_size = 4.0
+export(float) var wall_height = 3.0
 
 const MAZE = [
     "###############",
@@ -48,9 +43,9 @@ func create_wall(x, z):
 
     var box_shape = BoxShape.new()
     box_shape.extents = Vector3(
-        CELL_SIZE * 0.5,
-        WALL_HEIGHT * 0.5,
-        CELL_SIZE * 0.5
+        cell_size * 0.5,
+        wall_height * 0.5,
+        cell_size * 0.5
     )
     collision.shape = box_shape
 
@@ -59,11 +54,11 @@ func create_wall(x, z):
     wall.add_child(mesh)
 
     var cube = CubeMesh.new()
-    cube.size = Vector3(CELL_SIZE, WALL_HEIGHT, CELL_SIZE)
+    cube.size = Vector3(cell_size, wall_height, cell_size)
     mesh.mesh = cube
 
     wall.translation = Vector3(
-        x * CELL_SIZE,
-        WALL_HEIGHT * 0.5,
-        z * CELL_SIZE
+        x * cell_size,
+        wall_height * 0.5,
+        z * cell_size
     )
