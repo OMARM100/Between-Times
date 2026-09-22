@@ -20,6 +20,8 @@ export(float) var camera_bob_speed = 9.0
 export(float) var camera_sway_amount = 0.012
 export(float) var camera_sway_speed = 6.0
 export(float) var camera_shake_amount = 0.015
+export(float) var camera_lean_angle = 8.0
+export(float) var camera_lean_speed = 10.0
 
 var velocity = Vector3()
 var look_angle = 0.0
@@ -112,5 +114,20 @@ func update_camera_motion(delta, input_vector):
     # This is intentionally small so the player does not lose visual control.
     var shake = camera_shake_amount if moving else 0.0
     var sway = sin(camera_bob_time * camera_sway_speed) * shake
+
+    # PUBG-style neck lean: Q leans left, E leans right.
+    var lean_direction = 0.0
+    if Input.is_key_pressed(KEY_Q):
+        lean_direction -= 1.0
+    if Input.is_key_pressed(KEY_E):
+        lean_direction += 1.0
+
+    var target_lean = deg2rad(camera_lean_angle) * lean_direction
+    var target_rotation = target_lean + sway
+
     if camera != null:
-        camera.rotation.z = lerp(camera.rotation.z, sway, min(delta * 8.0, 1.0))
+        camera.rotation.z = lerp(
+            camera.rotation.z,
+            target_rotation,
+            min(delta * camera_lean_speed, 1.0)
+        )
