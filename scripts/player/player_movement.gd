@@ -1,7 +1,7 @@
 extends KinematicBody
 class_name Player
 
-# Basic player movement — Godot 3.5
+# Player movement and camera look — Godot 3.5
 
 export(float) var walk_speed = 5.0
 export(float) var sprint_speed = 8.0
@@ -10,7 +10,40 @@ export(float) var air_acceleration = 7.0
 export(float) var jump_force = 5.5
 export(float) var gravity = 18.0
 
+export(float) var mouse_sensitivity = 0.0025
+export(float) var max_look_angle = 89.0
+
 var velocity = Vector3()
+var look_angle = 0.0
+var head = null
+
+func _ready():
+    head = get_node_or_null("Head")
+
+    if head != null:
+        Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+func _input(event):
+    if head == null:
+        return
+
+    if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+        rotate_y(-event.relative.x * mouse_sensitivity)
+
+        look_angle -= event.relative.y * mouse_sensitivity
+        look_angle = clamp(
+            look_angle,
+            deg2rad(-max_look_angle),
+            deg2rad(max_look_angle)
+        )
+
+        head.rotation.x = look_angle
+
+    if event is InputEventKey and event.pressed and event.scancode == KEY_ESCAPE:
+        Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+    if event is InputEventMouseButton and event.pressed:
+        Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 func _physics_process(delta):
     if not is_on_floor():
@@ -26,7 +59,7 @@ func _physics_process(delta):
         Input.get_action_strength("move_backward") - Input.get_action_strength("move_forward")
     )
 
-    var direction = Vector3(input_vector.x, 0, input_vector.y).normalized()
+    var direction = (transform.basis * Vector3(input_vector.x, 0, input_vector.y)).normalized()
     var target_speed = sprint_speed if Input.is_action_pressed("sprint") else walk_speed
     var target_velocity = direction * target_speed
     var acceleration_rate = acceleration if is_on_floor() else air_acceleration
