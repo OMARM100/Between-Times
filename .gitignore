@@ -2,3 +2,12 @@
 project.godot
 default_env.tres
 scenes/
+.import/
+
+# Godot 3.5 generated/imported files
+export.cfg
+export_presets.cfg
+
+# Operating system files
+.DS_Store
+Thumbs.db
