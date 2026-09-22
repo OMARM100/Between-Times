@@ -4,9 +4,9 @@ extends Spatial
 # One large irregular maze with mixed corridors, halls and rooms.
 # Geometry is optimized by merging contiguous wall cells into long wall segments.
 
-export(float) var cell_size = 4.0
-export(float) var wall_height = 4.0
-export(float) var ceiling_height = 7.0
+export(float) var cell_size = 3.5
+export(float) var wall_height = 4.6
+export(float) var ceiling_height = 5.2
 
 export(Color) var wall_color = Color(0.55, 0.58, 0.62)
 export(Color) var floor_color = Color(0.16, 0.18, 0.20)
@@ -48,30 +48,33 @@ func generate_layout():
             row.append(0)
         layout.append(row)
 
-    # Broad outer routes.
-    carve_rect(2, 2, maze_width - 3, 4)
-    carve_rect(2, maze_depth - 6, maze_width - 3, 4)
-    carve_rect(2, 2, 4, maze_depth - 3)
-    carve_rect(maze_width - 6, 2, 4, maze_depth - 3)
+    # Main routes are narrower now so the player cannot read the whole layout at once.
+    carve_rect(2, 3, maze_width - 8, 3)
+    carve_rect(5, maze_depth - 6, maze_width - 10, 3)
+    carve_rect(3, 4, 3, maze_depth - 10)
+    carve_rect(maze_width - 7, 6, 3, maze_depth - 12)
 
-    # Large irregular halls and rooms.
-    carve_rect(15, 5, 11, 7)
-    carve_rect(9, 15, 8, 13)
-    carve_rect(24, 14, 9, 14)
-    carve_rect(16, 28, 10, 7)
+    # Larger spaces exist, but they are separated by turns and narrow connectors.
+    carve_rect(15, 5, 9, 6)
+    carve_rect(10, 15, 7, 9)
+    carve_rect(24, 15, 8, 10)
+    carve_rect(16, 29, 9, 6)
 
-    # Corridors with different widths.
-    carve_rect(5, 10, 16, 3)
-    carve_rect(20, 10, 3, 12)
-    carve_rect(12, 25, 3, 11)
-    carve_rect(27, 25, 3, 11)
-    carve_rect(15, 21, 13, 3)
+    # Corridors with different widths and deliberate turns.
+    carve_rect(5, 10, 10, 2)
+    carve_rect(14, 10, 2, 8)
+    carve_rect(20, 9, 2, 11)
+    carve_rect(12, 25, 2, 10)
+    carve_rect(27, 25, 2, 10)
+    carve_rect(16, 23, 12, 2)
 
-    # Branches and side paths.
-    carve_rect(7, 6, 3, 9)
-    carve_rect(31, 7, 4, 10)
-    carve_rect(5, 30, 10, 3)
-    carve_rect(28, 32, 8, 3)
+    # Branches and side paths create dead ends and blind corners.
+    carve_rect(8, 6, 2, 7)
+    carve_rect(31, 7, 2, 8)
+    carve_rect(5, 31, 8, 2)
+    carve_rect(29, 32, 7, 2)
+    carve_rect(6, 13, 2, 5)
+    carve_rect(34, 15, 2, 7)
 
     # Irregular room shapes made from overlapping spaces.
     carve_rect(7, 17, 7, 7)
@@ -82,11 +85,13 @@ func generate_layout():
     carve_rect(25, 20, 12, 3)
     carve_rect(29, 16, 3, 11)
 
-    # Extra pockets to avoid a rigid grid appearance.
-    carve_rect(3, 13, 5, 3)
-    carve_rect(34, 12, 4, 3)
-    carve_rect(17, 3, 4, 3)
-    carve_rect(20, 35, 4, 3)
+    # Small pockets and offset connectors break the obvious grid pattern.
+    carve_rect(3, 14, 4, 2)
+    carve_rect(34, 11, 3, 2)
+    carve_rect(18, 3, 3, 2)
+    carve_rect(20, 35, 3, 2)
+    carve_rect(8, 27, 5, 2)
+    carve_rect(32, 27, 4, 2)
 
     configure_spawn_room()
 
@@ -278,19 +283,60 @@ func create_ceiling():
     )
 
 func create_merged_walls():
+    var processed = {}
+
+    # Merge horizontal wall runs.
     for z in range(maze_depth):
         var x = 0
-
         while x < maze_width:
             if layout[z][x] == 0:
                 var start_x = x
-
                 while x + 1 < maze_width and layout[z][x + 1] == 0:
                     x += 1
-
                 create_wall_segment(start_x, z, x - start_x + 1)
-
             x += 1
+
+    # Add the missing vertical faces only where a corridor touches a wall.
+    # This closes sightlines and makes the maze read as connected walls rather
+    # than a set of flat horizontal strips.
+    for z in range(1, maze_depth - 1):
+        for x in range(1, maze_width - 1):
+            if layout[z][x] == 1:
+                if layout[z][x - 1] == 0:
+                    create_wall_face(Vector3(x * cell_size - cell_size * 0.5, wall_height * 0.5, z * cell_size), true)
+                if layout[z][x + 1] == 0:
+                    create_wall_face(Vector3(x * cell_size + cell_size * 0.5, wall_height * 0.5, z * cell_size), true)
+
+func create_wall_face(position, vertical):
+    var wall = StaticBody.new()
+    wall.name = "WallFace_%d_%d" % [int(position.x), int(position.z)]
+    add_child(wall)
+
+    var collision = CollisionShape.new()
+    collision.name = "CollisionShape"
+    wall.add_child(collision)
+
+    var box_shape = BoxShape.new()
+    box_shape.extents = Vector3(
+        cell_size * 0.5 if vertical else cell_size * 0.5,
+        wall_height * 0.5,
+        0.12 if vertical else cell_size * 0.5
+    )
+    collision.shape = box_shape
+
+    var mesh = MeshInstance.new()
+    mesh.name = "Mesh"
+    wall.add_child(mesh)
+
+    var cube = CubeMesh.new()
+    cube.size = Vector3(
+        cell_size if vertical else cell_size,
+        wall_height,
+        0.24 if vertical else cell_size
+    )
+    mesh.mesh = cube
+    mesh.material_override = create_material(wall_color)
+    wall.translation = position
 
 func create_wall_segment(start_x, z, length):
     var wall = StaticBody.new()
