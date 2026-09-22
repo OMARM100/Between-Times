@@ -17,11 +17,20 @@ export(int) var maze_width = 41
 export(int) var maze_depth = 41
 export(int) var room_light_count = 3
 
+# Maze generation can stay deterministic for testing or use a random seed.
+export(bool) var randomize_maze = false
+export(int) var maze_seed = 20260922
+
+# Player spawn room: medium-sized room with exactly one exit into the maze.
+export(Vector2) var spawn_room_size = Vector2(9, 7)
+export(Vector2) var spawn_room_origin = Vector2(16, 15)
+
 # 0 = wall, 1 = corridor.
 var layout = []
 
 func _ready():
     build_maze()
+    setup_player_spawn()
 
 func build_maze():
     generate_layout()
@@ -79,6 +88,13 @@ func generate_layout():
     carve_rect(17, 3, 4, 3)
     carve_rect(20, 35, 4, 3)
 
+    configure_spawn_room()
+
+    # Optional seeded variation keeps the main blockout recognizable while
+    # adding different side pockets when randomize_maze is enabled.
+    if randomize_maze:
+        add_seeded_variation()
+
     # Keep the outside boundary closed.
     for x in range(maze_width):
         layout[0][x] = 0
@@ -87,6 +103,89 @@ func generate_layout():
     for z in range(maze_depth):
         layout[z][0] = 0
         layout[z][maze_width - 1] = 0
+
+func configure_spawn_room():
+    var room_x = int(spawn_room_origin.x)
+    var room_z = int(spawn_room_origin.y)
+    var room_width = int(spawn_room_size.x)
+    var room_depth = int(spawn_room_size.y)
+
+    # Clear the complete room first.
+    for z in range(room_z, min(room_z + room_depth, maze_depth - 1)):
+        for x in range(room_x, min(room_x + room_width, maze_width - 1)):
+            layout[z][x] = 1
+
+    # Close the room perimeter.
+    for x in range(room_x - 1, room_x + room_width + 1):
+        if x > 0 and x < maze_width - 1:
+            layout[room_z - 1][x] = 0
+            layout[room_z + room_depth][x] = 0
+
+    for z in range(room_z - 1, room_z + room_depth + 1):
+        if z > 0 and z < maze_depth - 1:
+            layout[z][room_x - 1] = 0
+            layout[z][room_x + room_width] = 0
+
+    # Single exit on the south side.
+    var exit_x = room_x + int(room_width * 0.5)
+    layout[room_z + room_depth][exit_x] = 1
+
+    # Connect the single exit to the existing maze.
+    for z in range(room_z + room_depth + 1, min(room_z + room_depth + 5, maze_depth - 1)):
+        layout[z][exit_x] = 1
+
+func add_seeded_variation():
+    var rng = RandomNumberGenerator.new()
+    rng.seed = maze_seed
+
+    for index in range(6):
+        var width = rng.randi_range(3, 6)
+        var depth = rng.randi_range(3, 5)
+        var start_x = rng.randi_range(3, maze_width - width - 4)
+        var start_z = rng.randi_range(3, maze_depth - depth - 4)
+
+        # Keep the spawn-room perimeter untouched.
+        if start_x + width >= int(spawn_room_origin.x) - 2 and start_x <= int(spawn_room_origin.x + spawn_room_size.x) + 1:
+            if start_z + depth >= int(spawn_room_origin.y) - 2 and start_z <= int(spawn_room_origin.y + spawn_room_size.y) + 1:
+                continue
+
+        carve_rect(start_x, start_z, width, depth)
+
+func setup_player_spawn():
+    var spawn_position = Vector3(
+        (spawn_room_origin.x + spawn_room_size.x * 0.5) * cell_size,
+        1.0,
+        (spawn_room_origin.y + spawn_room_size.y * 0.5) * cell_size
+    )
+
+    var player = find_player()
+
+    if player == null:
+        var player_scene_path = "res://scenes/Player.tscn"
+        if ResourceLoader.exists(player_scene_path):
+            var player_scene = load(player_scene_path)
+            if player_scene != null:
+                player = player_scene.instance()
+                get_parent().add_child(player)
+        else:
+            print("Player scene not found at ", player_scene_path)
+
+    if player != null:
+        player.global_transform.origin = get_global_transform().xform(spawn_position)
+        print("Player spawn set to: ", spawn_position)
+
+func find_player():
+    var parent_node = get_parent()
+    if parent_node != null:
+        var player = parent_node.get_node_or_null("Player")
+        if player != null:
+            return player
+
+    var direct_player = get_node_or_null("Player")
+    if direct_player != null:
+        return direct_player
+
+    return null
 
 func carve_rect(start_x, start_z, width, depth):
     var end_x = min(start_x + width, maze_width - 1)
