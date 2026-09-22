@@ -1,5 +1,4 @@
 extends Spatial
-class_name StaticMaze
 
 # Fixed prototype maze for Godot 3.5.
 # The layout is predefined and does not change between runs.
