@@ -31,7 +31,8 @@ func _input(event):
     if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
         rotate_y(-event.relative.x * mouse_sensitivity)
 
-        look_angle += event.relative.y * mouse_sensitivity
+        # Vertical mouse look: moving the mouse down looks down.
+        look_angle -= event.relative.y * mouse_sensitivity
         look_angle = clamp(
             look_angle,
             deg2rad(-look_up_limit),
