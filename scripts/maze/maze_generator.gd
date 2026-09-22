@@ -126,13 +126,22 @@ func configure_spawn_room():
             layout[z][room_x - 1] = 0
             layout[z][room_x + room_width] = 0
 
-    # Single exit on the south side.
+    # One clearly readable exit on the south side.
+    # The opening is wide enough to feel intentional, but it is still one exit.
     var exit_x = room_x + int(room_width * 0.5)
-    layout[room_z + room_depth][exit_x] = 1
+    for x in range(exit_x - 1, exit_x + 2):
+        layout[room_z + room_depth][x] = 1
 
-    # Connect the single exit to the existing maze.
-    for z in range(room_z + room_depth + 1, min(room_z + room_depth + 5, maze_depth - 1)):
-        layout[z][exit_x] = 1
+    # Build a short 3-cell-wide approach corridor before opening into the maze.
+    for z in range(room_z + room_depth + 1, min(room_z + room_depth + 6, maze_depth - 1)):
+        for x in range(exit_x - 1, exit_x + 2):
+            layout[z][x] = 1
+
+    # Open the end of the approach into a small transition hall.
+    for z in range(room_z + room_depth + 5, min(room_z + room_depth + 8, maze_depth - 1)):
+        for x in range(exit_x - 3, exit_x + 4):
+            if x > 0 and x < maze_width - 1:
+                layout[z][x] = 1
 
 func add_seeded_variation():
     var rng = RandomNumberGenerator.new()
@@ -346,4 +355,28 @@ func create_material(color):
     var material = SpatialMaterial.new()
     material.albedo_color = color
     material.roughness = 0.85
+
+    # Lightweight spatial shader: subtle world-position variation and edge
+    # response for a cleaner prototype look without textures or post-processing.
+    var shader = Shader.new()
+    shader.code = """
+shader_type spatial;
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform vec4 base_color : hint_color;
+uniform float variation_strength = 0.035;
+uniform float edge_strength = 0.08;
+
+void fragment() {
+    float n = sin(WORLD_MATRIX[3].x * 0.035 + WORLD_MATRIX[3].z * 0.021) * 0.5 + 0.5;
+    vec3 varied = base_color.rgb * mix(1.0 - variation_strength, 1.0 + variation_strength, n);
+    float edge = pow(1.0 - max(dot(NORMAL, VIEW), 0.0), 3.0);
+    ALBEDO = varied + edge * edge_strength;
+    ROUGHNESS = 0.85;
+}
+"""
+    var shader_material = ShaderMaterial.new()
+    shader_material.shader = shader
+    shader_material.set_shader_param("base_color", color)
+    material = shader_material
     return material
